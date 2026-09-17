@@ -850,7 +850,10 @@ document.getElementById('themeToggle').onclick = ()=>{
 /* ============================================================
    DATE HELPERS
    ============================================================ */
-function fmtDate(d){ return d.toISOString().slice(0,10); }
+function fmtDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function todayStr(){ return fmtDate(new Date()); }
 function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
