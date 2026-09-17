@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Attendance Tracker — MMMUT ChE</title>
+<meta name="theme-color" content="#0ea5e9">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230ea5e9'/%3E%3Cpath d='M30 52 L44 66 L72 34' stroke='white' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+  --accent:#0ea5e9; --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
+  --radius:16px; --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+[data-theme="dark"]{
+  --bg:#0b1220; --card:#111a2c; --text:#e5e9f0; --muted:#8b98ac; --border:#1f2a3e;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--text);transition:background .2s,color .2s;}
+button{font-family:inherit;cursor:pointer}
+.app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:80px;position:relative}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);padding:16px 16px 8px;
+  display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(8px)}
+header.top h1{font-size:18px;margin:0;font-weight:700;display:flex;align-items:center;gap:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync-dot.online{background:var(--good)}
+.sync-dot.syncing{background:var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.icon-btn{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+main{padding:8px 16px 16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card h2{font-size:14px;margin:0 0 12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.big-stat{display:flex;align-items:baseline;gap:8px}
+.big-stat .num{font-size:42px;font-weight:800;line-height:1}
+.big-stat .lbl{color:var(--muted);font-size:13px}
+.progress{height:8px;border-radius:99px;background:var(--border);overflow:hidden;margin-top:12px}
+.progress > div{height:100%;border-radius:99px;transition:width .3s}
+.class-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
+  border-bottom:1px solid var(--border)}
+.class-item:last-child{border-bottom:none}
+.class-info{display:flex;gap:10px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.class-name{font-weight:600;font-size:14px}
+.class-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.mark-btns{display:flex;gap:6px}
+.mark-btn{border:1px solid var(--border);background:var(--bg);border-radius:10px;
+  width:36px;height:36px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.mark-btn.active-p{background:var(--good);border-color:var(--good);color:#fff}
+.mark-btn.active-a{background:var(--bad);border-color:var(--bad);color:#fff}
+.mark-btn.active-c{background:var(--muted);border-color:var(--muted);color:#fff}
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  max-width:520px;margin:0 auto;z-index:20}
+.tab{background:none;border:none;color:var(--muted);display:flex;flex-direction:column;
+  align-items:center;gap:2px;font-size:10px;padding:4px 12px;border-radius:10px}
+.tab.active{color:var(--accent)}
+.subject-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.subject-row:last-child{border-bottom:none}
+.badge{font-size:11px;padding:3px 8px;border-radius:99px;font-weight:700}
+.badge.good{background:rgba(16,185,129,.15);color:var(--good)}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge.bad{background:rgba(239,68,68,.15);color:var(--bad)}
+.empty{text-align:center;color:var(--muted);padding:32px 16px;font-size:14px}
+input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);font-size:14px}
+label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
+.btn{padding:10px 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:14px}
+.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.week-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px}
+.day-cell{text-align:center;padding:8px 2px;border-radius:10px;font-size:11px;background:var(--bg);border:1px solid var(--border)}
+.day-cell.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--text);
+  color:var(--bg);padding:10px 18px;border-radius:99px;font-size:13px;z-index:50;opacity:0;
+  transition:opacity .2s;pointer-events:none;max-width:80%;text-align:center}
+.toast.show{opacity:1}
+code{background:var(--bg);padding:1px 5px;border-radius:6px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1><span id="syncDot" class="sync-dot" title="Sync status"></span>Attendance</h1>
+    <button class="icon-btn" id="themeToggle">🌙</button>
+  </header>
+  <main id="main"></main>
+  <div class="toast" id="toast"></div>
+  <nav class="tabbar">
+    <button class="tab active" data-view="today">📅<span>Today</span></button>
+    <button class="tab" data-view="subjects">📊<span>Subjects</span></button>
+    <button class="tab" data-view="timetable">🗓️<span>Timetable</span></button>
+    <button class="tab" data-view="calendar">📖<span>History</span></button>
+    <button class="tab" data-view="settings">⚙️<span>Settings</span></button>
+  </nav>
+</div>
+
+<script type="module">
+/* ============================================================
+   FIREBASE SETUP
+   ============================================================ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCcuNUXe-LwHIqdjfnGGXeFnt7Pd8g7Dok",
+  authDomain: "attendance-11cc6.firebaseapp.com",
+  projectId: "attendance-11cc6",
+  storageBucket: "attendance-11cc6.firebasestorage.app",
+  messagingSenderId: "384287902598",
+  appId: "1:384287902598:web:72d6f2c1745b3f2398fa07",
+  measurementId: "G-8JVSLLLVVK"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+let uid = null;
+let cloudReady = false;
+let suppressNextSnapshot = false; // avoid re-writing what we just wrote
+let saveTimer = null;
+
+function setSyncDot(mode){
+  // mode: 'offline' | 'online' | 'syncing'
+  const el = document.getElementById('syncDot');
+  el.className = 'sync-dot' + (mode==='online' ? ' online' : mode==='syncing' ? ' syncing' : '');
+  el.title = mode==='online' ? 'Synced' : mode==='syncing' ? 'Syncing…' : 'Offline (local only)';
+}
+
+/* ============================================================
+   DATA MODEL — your real Batch P1/T1 timetable
+   ============================================================ */
+const SUBJECTS = {
+  "BSM-110": { code:"BSM-110", name:"Engineering Mathematics-I", color:"#eab308" },
+  "BSM-131": { code:"BSM-131", name:"Engineering Physics",       color:"#f97316" },
+  "BIT-103": { code:"BIT-103", name:"Programming in C",          color:"#22c55e" },
+  "BME-101": { code:"BME-101", name:"Manufacturing Techniques Workshop", color:"#38bdf8" },
+  "BHS-101": { code:"BHS-101", name:"Universal Human Values",    color:"#a855f7" },
+};
+
+const TIMETABLE = [
+  { id:"mon-1", day:1, start:"10:00", end:"10:50", subject:"BSM-131", type:"lecture",   room:"TL-110" },
+  { id:"mon-2", day:1, start:"10:50", end:"11:40", subject:"BSM-110", type:"lecture",   room:"TL-110", faculty:"VB" },
+  { id:"tue-1", day:2, start:"10:00", end:"10:50", subject:"BSM-131", type:"lecture",   room:"TL-110" },
+  { id:"tue-2", day:2, start:"10:50", end:"11:40", subject:"BSM-110", type:"lecture",   room:"TL-110" },
+  { id:"tue-3", day:2, start:"14:00", end:"15:30", subject:"BSM-131", type:"practical", room:"TL-110", batch:"P1" },
+  { id:"tue-4", day:2, start:"15:30", end:"16:15", subject:"BSM-110", type:"tutorial",  room:"TL-110", batch:"T1", faculty:"AG" },
+  { id:"wed-1", day:3, start:"09:10", end:"12:30", subject:"BME-101", type:"practical", room:"BME-104", batch:"P1" },
+  { id:"thu-1", day:4, start:"10:00", end:"10:50", subject:"BSM-131", type:"lecture",   room:"TL-110" },
+  { id:"thu-2", day:4, start:"10:50", end:"11:40", subject:"BHS-101", type:"lecture",   room:"TL-110" },
+  { id:"thu-3", day:4, start:"11:40", end:"12:30", subject:"BIT-103", type:"lecture",   room:"TL-110", faculty:"AKG" },
+  { id:"fri-1", day:5, start:"09:10", end:"10:00", subject:"BSM-110", type:"lecture",   room:"TL-110", faculty:"VB" },
+  { id:"fri-2", day:5, start:"10:00", end:"10:50", subject:"BHS-101", type:"lecture",   room:"TL-110" },
+  { id:"fri-3", day:5, start:"10:50", end:"11:40", subject:"BIT-103", type:"lecture",   room:"TL-110", faculty:"AKG" },
+  { id:"fri-4", day:5, start:"14:00", end:"14:45", subject:"BME-101", type:"lecture",   room:"TL-110" },
+  { id:"sat-1", day:6, start:"09:10", end:"10:00", subject:"BIT-103", type:"practical", room:"ITRC-01", batch:"P1" },
+  { id:"sat-2", day:6, start:"10:00", end:"10:50", subject:"BME-101", type:"lecture",   room:"TL-110" },
+  { id:"sat-3", day:6, start:"10:50", end:"11:40", subject:"BHS-101", type:"lecture",   room:"TL-110" },
+];
+const DEFAULT_THRESHOLD = 75;
+
+/* ============================================================
+   STATE  (localStorage first, Firestore mirrors it)
+   ============================================================ */
+const STORE_KEY = "att_app_state_v1";
+function defaultState(){
+  return {
+    threshold: DEFAULT_THRESHOLD,
+    theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light',
+    records: {},        // "YYYY-MM-DD|classId": "present"|"absent"|"cancelled"
+    holidays: {},        // "YYYY-MM-DD": true
+    manualClasses: [],   // {id,date,subject,type,start,end,room}
+    semesterStart: null,
+    _updatedAt: 0,
+  };
+}
+function loadLocal(){
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return {...defaultState(), ...JSON.parse(raw)}; }
+  catch(e){}
+  return defaultState();
+}
+let state = loadLocal();
+
+function saveLocal(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ toast("Local save failed — storage may be full"); }
+}
+
+function saveState(){
+  state._updatedAt = Date.now();
+  saveLocal();
+  scheduleCloudSave();
+}
+
+function scheduleCloudSave(){
+  if(!cloudReady || !uid) return;
+  setSyncDot('syncing');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      suppressNextSnapshot = true;
+      await setDoc(doc(db, "attendance", uid), state);
+      setSyncDot('online');
+    }catch(e){
+      console.error("cloud save failed", e);
+      setSyncDot('offline');
+    }
+  }, 800); // debounce
+}
+
+/* Sign in anonymously, pull initial cloud state (merge by recency), then listen live */
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    uid = user.uid;
+    cloudReady = true;
+    try{
+      const snap = await getDoc(doc(db, "attendance", uid));
+      if(snap.exists()){
+        const cloud = snap.data();
+        if((cloud._updatedAt||0) > (state._updatedAt||0)){
+          state = {...defaultState(), ...cloud};
+          saveLocal();
+        }
+      } else {
+        // seed cloud with whatever we have locally
+        await setDoc(doc(db, "attendance", uid), state);
+      }
+      setSyncDot('online');
+      render();
+      // live listener for cross-device updates
+      onSnapshot(doc(db, "attendance", uid), (snap)=>{
+        if(suppressNextSnapshot){ suppressNextSnapshot=false; return; }
+        if(!snap.exists()) return;
+        const cloud = snap.data();
+        if((cloud._updatedAt||0) > (state._updatedAt||0)){
+          state = {...defaultState(), ...cloud};
+          saveLocal();
+          render();
+          toast("Synced from another device");
+        }
+      });
+    }catch(e){
+      console.error("initial cloud fetch failed", e);
+      setSyncDot('offline');
+    }
+  } else {
+    setSyncDot('offline');
+  }
+});
+signInAnonymously(auth).catch(e=>{ console.error("anon sign-in failed", e); setSyncDot('offline'); });
+
+/* ============================================================
+   THEME
+   ============================================================ */
+document.documentElement.setAttribute('data-theme', state.theme);
+document.getElementById('themeToggle').textContent = state.theme==='dark' ? '☀️' : '🌙';
+document.getElementById('themeToggle').onclick = ()=>{
+  state.theme = state.theme==='dark' ? 'light':'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  document.getElementById('themeToggle').textContent = state.theme==='dark' ? '☀️' : '🌙';
+  saveState();
+};
+
+/* ============================================================
+   DATE HELPERS
+   ============================================================ */
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function todayStr(){ return fmtDate(new Date()); }
+function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function dayName(n){ return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][n]; }
+function fullDayName(n){ return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][n]; }
+function niceDate(s){ const d=parseDate(s); return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}); }
+
+function classesForDate(dateStr){
+  const d = parseDate(dateStr); const dow = d.getDay();
+  if(state.holidays[dateStr]) return [];
+  const scheduled = TIMETABLE.filter(c=>c.day===dow).map(c=>({...c, date:dateStr, key:dateStr+"|"+c.id}));
+  const manual = state.manualClasses.filter(m=>m.date===dateStr).map(m=>({...m, key:dateStr+"|"+m.id}));
+  return [...scheduled, ...manual].sort((a,b)=> a.start.localeCompare(b.start));
+}
+
+/* ============================================================
+   ATTENDANCE ENGINE
+   ============================================================ */
+function getSemesterStart(){
+  if(state.semesterStart) return parseDate(state.semesterStart);
+  const keys = Object.keys(state.records);
+  if(keys.length){ const dates = keys.map(k=>k.split('|')[0]).sort(); return parseDate(dates[0]); }
+  return addDays(new Date(), -7*8);
+}
+function computeStats(){
+  const start = getSemesterStart(); const end = new Date();
+  const perSubject = {};
+  Object.keys(SUBJECTS).forEach(c=> perSubject[c] = {attended:0,total:0,cancelled:0,marked:0});
+  let cur = new Date(start);
+  while(cur <= end){
+    const ds = fmtDate(cur);
+    classesForDate(ds).forEach(c=>{
+      const status = state.records[c.key]; const s = perSubject[c.subject]; if(!s) return;
+      if(status === 'cancelled'){ s.cancelled++; return; }
+      if(status === 'present'){ s.attended++; s.total++; s.marked++; }
+      else if(status === 'absent'){ s.total++; s.marked++; }
+    });
+    cur = addDays(cur,1);
+  }
+  return perSubject;
+}
+function pct(s){ return s.total===0 ? 100 : Math.round((s.attended/s.total)*1000)/10; }
+function classesToReachThreshold(s, threshold){
+  if(pct(s) >= threshold) return 0;
+  let attended=s.attended, total=s.total, n=0;
+  while(total===0 || (attended/total)*100 < threshold){ attended++; total++; n++; if(n>500) break; }
+  return n;
+}
+function safeToMiss(s, threshold){
+  if(pct(s) < threshold) return 0;
+  let attended=s.attended, total=s.total, n=0;
+  while(true){ const nt=total+1; if((attended/nt)*100 < threshold) break; total=nt; n++; if(n>500) break; }
+  return n;
+}
+function overallStats(){
+  const per = computeStats(); let attended=0, total=0;
+  Object.values(per).forEach(s=>{ attended+=s.attended; total+=s.total; });
+  return { attended, total, pct: total===0?100:Math.round((attended/total)*1000)/10, per };
+}
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function statusColor(p, threshold){ if(p>=threshold) return 'good'; if(p>=threshold-10) return 'warn'; return 'bad'; }
+function typeLabel(c){
+  if(c.type==='practical') return `Practical${c.batch?' '+c.batch:''}`;
+  if(c.type==='tutorial') return `Tutorial${c.batch?' '+c.batch:''}`;
+  return 'Lecture';
+}
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+const main = document.getElementById('main');
+let currentView = 'today';
+let selectedHistoryDate = todayStr();
+
+function render(){
+  if(currentView==='today') renderToday();
+  else if(currentView==='subjects') renderSubjects();
+  else if(currentView==='timetable') renderTimetable();
+  else if(currentView==='calendar') renderCalendar();
+  else if(currentView==='settings') renderSettings();
+}
+
+function renderToday(){
+  const ds = todayStr();
+  const classes = classesForDate(ds);
+  const ov = overallStats();
+  let lowWarnings = Object.entries(ov.per)
+    .filter(([code,s])=> s.total>0 && pct(s) < state.threshold)
+    .map(([code,s])=> `${SUBJECTS[code].name}: ${pct(s)}%`);
+
+  main.innerHTML = `
+    <div class="card">
+      <h2>Overall Attendance</h2>
+      <div class="big-stat"><span class="num" style="color:${ov.pct>=state.threshold?'var(--good)':'var(--bad)'}">${ov.pct}%</span>
+        <span class="lbl">${ov.attended}/${ov.total} classes</span></div>
+      <div class="progress"><div style="width:${Math.min(ov.pct,100)}%;background:${ov.pct>=state.threshold?'var(--good)':'var(--bad)'}"></div></div>
+    </div>
+    ${lowWarnings.length ? `<div class="card" style="border-color:var(--bad)">
+      <h2 style="color:var(--bad)">⚠️ Low Attendance</h2>
+      ${lowWarnings.map(w=>`<div class="class-meta" style="margin-bottom:4px">${w}</div>`).join('')}
+    </div>` : ''}
+    <div class="card">
+      <h2>${fullDayName(new Date().getDay())}, ${niceDate(ds)}</h2>
+      ${classes.length===0 ? `<div class="empty">No classes today 🎉</div>` : classes.map(c=>classItemHTML(c)).join('')}
+      ${classes.length>0 ? `<button class="btn secondary" style="width:100%;margin-top:10px" onclick="markAllPresent('${ds}')">Mark all Present</button>`:''}
+    </div>
+    <div class="card">
+      <h2>Quick Add</h2>
+      <button class="btn secondary" style="width:100%" onclick="openManualClassForm('${ds}')">+ Add extra class today</button>
+      <button class="btn secondary" style="width:100%;margin-top:8px" onclick="toggleHoliday('${ds}')">${state.holidays[ds]?'Unmark holiday':'Mark today as holiday'}</button>
+    </div>
+  `;
+}
+function classItemHTML(c){
+  const status = state.records[c.key]; const sub = SUBJECTS[c.subject];
+  return `<div class="class-item">
+    <div class="class-info">
+      <div class="dot" style="background:${sub.color}"></div>
+      <div><div class="class-name">${sub.name}</div>
+      <div class="class-meta">${c.start}–${c.end} · ${typeLabel(c)} · ${c.room}</div></div>
+    </div>
+    <div class="mark-btns">
+      <button class="mark-btn ${status==='present'?'active-p':''}" onclick="mark('${c.key}','present')" title="Present">✓</button>
+      <button class="mark-btn ${status==='absent'?'active-a':''}" onclick="mark('${c.key}','absent')" title="Absent">✕</button>
+      <button class="mark-btn ${status==='cancelled'?'active-c':''}" onclick="mark('${c.key}','cancelled')" title="Cancelled">–</button>
+    </div>
+  </div>`;
+}
+window.mark = function(key, status){
+  if(state.records[key] === status){ delete state.records[key]; } else { state.records[key] = status; }
+  saveState(); render();
+};
+window.markAllPresent = function(ds){
+  classesForDate(ds).forEach(c=>{ if(!state.records[c.key]) state.records[c.key]='present'; });
+  saveState(); render(); toast("Marked all present");
+};
+window.toggleHoliday = function(ds){
+  if(state.holidays[ds]) delete state.holidays[ds]; else state.holidays[ds]=true;
+  saveState(); render();
+};
+
+function renderSubjects(){
+  const ov = overallStats();
+  main.innerHTML = `<div class="card"><h2>Subject-wise Attendance</h2>
+    ${Object.entries(SUBJECTS).map(([code,sub])=>{
+      const s = ov.per[code]; const p = pct(s); const cls = statusColor(p, state.threshold);
+      const need = classesToReachThreshold(s, state.threshold); const safe = safeToMiss(s, state.threshold);
+      return `<div class="subject-row">
+        <div><div class="class-name">${sub.name}</div>
+        <div class="class-meta">${s.attended}/${s.total} attended${need>0?` · need ${need} more`:''}${safe>0?` · can miss ${safe}`:''}</div></div>
+        <span class="badge ${cls}">${p}%</span></div>`;
+    }).join('')}
+  </div>
+  <div class="card"><h2>Threshold</h2><div class="class-meta">Current minimum: ${state.threshold}%</div></div>`;
+}
+
+function renderTimetable(){
+  let html = '';
+  for(let d=1; d<=6; d++){
+    const items = TIMETABLE.filter(c=>c.day===d).sort((a,b)=>a.start.localeCompare(b.start));
+    if(!items.length) continue;
+    html += `<div class="card"><h2>${fullDayName(d)}</h2>
+      ${items.map(c=>{
+        const sub = SUBJECTS[c.subject];
+        return `<div class="class-item"><div class="class-info">
+          <div class="dot" style="background:${sub.color}"></div>
+          <div><div class="class-name">${sub.name}</div>
+          <div class="class-meta">${c.start}–${c.end} · ${typeLabel(c)} · ${c.room}${c.faculty?' · '+c.faculty:''}</div></div>
+        </div></div>`;
+      }).join('')}
+    </div>`;
+  }
+  main.innerHTML = html;
+}
+
+function renderCalendar(){
+  const ds = selectedHistoryDate;
+  const base = parseDate(ds); const monday = addDays(base, -((base.getDay()+6)%7));
+  let strip = '<div class="week-cal">';
+  for(let i=0;i<7;i++){
+    const d = addDays(monday,i); const s = fmtDate(d);
+    strip += `<div class="day-cell ${s===ds?'sel':''}" onclick="selectHistoryDate('${s}')"><div>${dayName(d.getDay())}</div><div>${d.getDate()}</div></div>`;
+  }
+  strip += '</div>';
+  const classes = classesForDate(ds);
+  main.innerHTML = `<div class="card"><h2>Edit Attendance Record</h2>${strip}
+    <div class="class-meta" style="margin-bottom:8px">${niceDate(ds)}</div>
+    ${classes.length===0? `<div class="empty">No classes this day</div>` : classes.map(c=>classItemHTML(c)).join('')}
+  </div>`;
+}
+window.selectHistoryDate = function(s){ selectedHistoryDate = s; render(); };
+
+function renderSettings(){
+  main.innerHTML = `
+  <div class="card"><h2>Minimum Attendance %</h2>
+    <input type="number" id="thresholdInput" value="${state.threshold}" min="1" max="100">
+    <button class="btn" style="margin-top:10px" onclick="saveThreshold()">Save</button></div>
+  <div class="card"><h2>Notifications</h2>
+    <button class="btn secondary" style="width:100%" onclick="requestNotifPermission()">Enable class reminders</button>
+    <div class="class-meta" style="margin-top:8px">Reminds you ~10 min after each class ends if it's unmarked, and flags subjects nearing the threshold. Works while this tab/app is open.</div></div>
+  <div class="card"><h2>Backup & Restore</h2>
+    <button class="btn secondary" style="width:100%" onclick="exportData()">Export data (JSON)</button>
+    <label>Import data</label><input type="file" id="importFile" accept="application/json"></div>
+  <div class="card"><h2>Cloud Sync</h2>
+    <div class="class-meta">Connected to Firebase (anonymous auth + Firestore). Your data syncs automatically across any browser/device where you open this file and stay signed in anonymously on the same Firebase project. <span id="uidLabel"></span></div></div>
+  <div class="card"><h2>Semester</h2><div class="class-meta">Stats are computed from your first recorded date to today.</div></div>
+  `;
+  document.getElementById('importFile').onchange = importData;
+  const uidLabel = document.getElementById('uidLabel');
+  if(uidLabel) uidLabel.textContent = uid ? `Device ID: ${uid.slice(0,8)}…` : '';
+}
+window.saveThreshold = function(){
+  const v = parseInt(document.getElementById('thresholdInput').value,10);
+  if(v>=1 && v<=100){ state.threshold=v; saveState(); toast("Threshold updated"); render(); }
+};
+window.exportData = function(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download=`attendance-backup-${todayStr()}.json`; a.click(); URL.revokeObjectURL(url);
+};
+function importData(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{ const data = JSON.parse(reader.result); state = {...defaultState(), ...data, _updatedAt: Date.now()};
+      saveState(); toast("Data imported"); render(); }
+    catch(err){ toast("Invalid backup file"); }
+  };
+  reader.readAsText(file);
+}
+window.openManualClassForm = function(ds){
+  const name = prompt("Subject code (e.g. BSM-110):");
+  if(!name || !SUBJECTS[name]) { toast("Unknown subject code"); return; }
+  const start = prompt("Start time (HH:MM):","09:00");
+  const end = prompt("End time (HH:MM):","10:00");
+  if(!start||!end) return;
+  const id = 'manual-'+Date.now();
+  state.manualClasses.push({id, date:ds, subject:name, type:'lecture', start, end, room:'—'});
+  saveState(); render(); toast("Class added");
+};
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+window.requestNotifPermission = function(){
+  if(!('Notification' in window)){ toast("Notifications not supported"); return; }
+  Notification.requestPermission().then(p=>{
+    if(p==='granted'){ toast("Reminders enabled"); scheduleReminders(); } else toast("Permission denied");
+  });
+};
+function scheduleReminders(){
+  setInterval(()=>{
+    const now = new Date(); const ds = todayStr();
+    classesForDate(ds).forEach(c=>{
+      const [eh,em] = c.end.split(':').map(Number);
+      const endTime = new Date(); endTime.setHours(eh,em+10,0,0);
+      const diff = now - endTime;
+      if(diff>=0 && diff < 5*60*1000 && !state.records[c.key]){
+        new Notification("Mark attendance", {body:`${SUBJECTS[c.subject].name} just ended — tap to mark it.`});
+      }
+    });
+  }, 5*60*1000);
+}
+if('Notification' in window && Notification.permission==='granted') scheduleReminders();
+
+/* ============================================================
+   NAV
+   ============================================================ */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active'); currentView = tab.dataset.view; render();
+  };
+});
+
+setSyncDot('offline');
+render();
+</script>
+</body>
+</html>
